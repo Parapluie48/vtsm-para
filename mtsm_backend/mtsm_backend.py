@@ -1,6 +1,6 @@
 from os import listdir
 import os
-from os.path import isfile, join
+from os.path import isfile, join, exists
 from pydub import AudioSegment
 from pydub.utils import make_chunks
 import moviepy.editor as mp
@@ -14,8 +14,11 @@ from mtsm_backend.database_handler import (db_create_connection,get_distinct_epi
                                             get_fingerprints_from_episodes_chunks,get_matching_fingerprints_from_fingerprints)
 
 def extract_soundtrack_from_file(folder_name,file_name):
-    clip=mp.VideoFileClip(folder_name+"/"+file_name)
-    clip.audio.write_audiofile(folder_name+"_soundtrack/"+file_name[:-3]+".mp3")
+    if not exists(folder_name+"_soundtrack/"+file_name[:-3]+".mp3"):
+        clip=mp.VideoFileClip(folder_name+"/"+file_name)
+        clip.audio.write_audiofile(folder_name+"_soundtrack/"+file_name[:-3]+".mp3")
+    else:
+        print(folder_name+"_soundtrack/"+file_name[:-3]+".mp3", " already exists, skipping the file !")
 
 def extract_soundtrack_from_files(folder_name,nb_threads=1):
     onlyfiles = [f for f in listdir(folder_name) if isfile(join(folder_name, f))]
