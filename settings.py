@@ -1,4 +1,4 @@
-# Dejavu
+##Copyright (c) 2013 Will Drevo
 
 # DEJAVU JSON RESPONSE
 SONG_ID = "song_id"

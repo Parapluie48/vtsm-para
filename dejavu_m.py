@@ -1,3 +1,5 @@
+#Copyright (c) 2013 Will Drevo
+
 import multiprocessing
 import hashlib
 import os
