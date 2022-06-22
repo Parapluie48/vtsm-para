@@ -41,17 +41,25 @@ if __name__ == '__main__':
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument('-cfde','--fingerprint_episodes',nargs=2,
-                        help='Create the fingerpint database of the videos')
+                        help='Create the fingerpint database of the videos\n'
+                        'Usages: \n'
+                        '-cfde path/to/episode/directory path/to/db_file')
     parser.add_argument('-cfds','--fingerprint_soundtrack',nargs=2,
-                        help='Create the fingerpint database of the soundtrack')
-    parser.add_argument('-ccmd','--chunk_matching_db',nargs=3,
-                        help='Create the matching database')
+                        help='Create the fingerpint database of the soundtrack\n'
+                        'Usages: \n'
+                        '-cfds path/to/soundtrack/directory path/to/db_file')
+    parser.add_argument('-ccmd','--chunks_matching_db',nargs=3,
+                        help='Create the matching database\n'
+                        'Usages: \n'
+                        '-ccmd path/to/episode_db_file path/to/soundtrack_db_file path/to/matching_db_file')
     parser.add_argument('-cbs','--chunks_by_soundtrack',nargs=2,
-                        help='Get chunks by soundtrack ID')
+                        help='Get chunks by soundtrack ID\n'
+                        'Usages: \n'
+                        '-cbs path/to/matching_db_file soundtrack_id')
 
     args=parser.parse_args()
 
-    if not args.fingerprint_episodes and not args.fingerprint_soundtrack and not args.chunk_matching_db and not args.chunks_by_soundtrack:
+    if not args.fingerprint_episodes and not args.fingerprint_soundtrack and not args.chunks_matching_db and not args.chunks_by_soundtrack:
         parser.print_help()
         sys.exit(0)
     
@@ -61,26 +69,21 @@ if __name__ == '__main__':
         
         create_fingerprints_database_episodes(folder_n,db_n)
     elif args.fingerprint_soundtrack:
-        print("soundtrack")
+        folder_n=args.fingerprint_soundtrack[0]
+        db_n=args.fingerprint_soundtrack[1]
+        
+        create_fingerprints_database_soundtrack(folder_n,db_n)
+
     elif args.chunks_matching_db:
-        print("matching db")
+        db_episodes=args.chunks_matching_db[0]
+        db_soundtrack=args.chunks_matching_db[1]
+        db_matchings=args.chunks_matching_db[2]
+        
+        create_chunk_matchings_database(db_episodes,db_soundtrack,db_matchings)
+
     elif args.chunks_by_soundtrack:
-        print("chunks by soundtrack")
+        db_matchings=args.chunks_by_soundtrack[0]
+        soundtrack_id=args.chunks_by_soundtrack[1]
 
-"""
-folder_name="episodes"
-folder_name_soundtrack="soundtrack"
-db_episodes="episodes_db.db"
-db_soundtrack="soundtrack_db.db"
-db_matchings="simple_db.pickle"
-
-
-create_fingerprints_database_episodes(folder_name,db_episodes)
-
-create_fingerprints_database_soundtrack(folder_name_soundtrack,db_soundtrack)
-
-create_chunk_matchings_database(db_episodes,db_soundtrack,db_matchings)
-
-chunks=get_chunks_by_soundtrack(db_matchings,97)
-print(chunks)
-"""
+        chunks=get_chunks_by_soundtrack(db_matchings,int(soundtrack_id))
+        print(chunks)
