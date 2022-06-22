@@ -37,7 +37,7 @@ def get_chunks_by_soundtrack(db_matchings,sound_id):
 
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(
-        description="mtsm-para: Match audio to soundtrack !",
+        description="vtsm-para: Match audio to soundtrack by parapluie48!",
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument('-cfde','--fingerprint_episodes',nargs=2,
