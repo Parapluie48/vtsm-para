@@ -221,7 +221,7 @@ def make_fingerprints_from_soundtracks(
     onlyfiles = [
         f for f in listdir(folder_name)
         if isfile(join(folder_name, f))]
-    onlyfiles = [(i, f) for i, f in enumerate(onlyfiles)]
+    onlyfiles = [(i, folder_name, f) for i, f in enumerate(onlyfiles)]
 
     previous_perc = -1
     sounds_chunks = [
@@ -229,7 +229,7 @@ def make_fingerprints_from_soundtracks(
         for r in range(0, len(onlyfiles), db_sound_processing)]
 
     for j, processing_sounds in enumerate(sounds_chunks):
-        fingerprints = thread_function(
+        fingerprints = thread_pool_function(
             make_fingerprints_from_soundtrack,
             processing_sounds,
             nb_threads
@@ -313,7 +313,7 @@ def print_chunk_matching_perc(
         total_length, previous_perc, i):
     if int((100*i)/total_length) != previous_perc:
         print(
-            "Soundtracks fingerprinted: ",
+            "Chunks matched: ",
             str(int((100*i)/total_length)),
             "%")
         previous_perc = int((100*i)/total_length)
@@ -329,7 +329,6 @@ def create_chunk_matchings_database(
     distinct_episodes_chunks = get_distinct_episodes_chunks_from_db(db_conn)
 
     simple_db = []
-    total_length = len(distinct_episodes_chunks)
     previous_perc = -1
 
     for i, (e, c) in enumerate(distinct_episodes_chunks):
@@ -347,8 +346,8 @@ def create_chunk_matchings_database(
 
         simple_db.append((e, c, sound_matching))
 
-        print_chunk_matching_perc(
-            total_length,
+        previous_perc = print_chunk_matching_perc(
+            len(distinct_episodes_chunks),
             previous_perc,
             i)
 
