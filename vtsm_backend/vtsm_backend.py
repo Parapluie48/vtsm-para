@@ -26,18 +26,18 @@ def extract_soundtrack_from_file(
     if not exists(
             folder_name
             + "_soundtrack/"
-            + file_name[:-3]
+            + file_name[:-4]
             + ".mp3"):       
         clip = mp.VideoFileClip(folder_name+"/"+file_name)
         clip.audio.write_audiofile(
             folder_name
             + "_soundtrack/"
-            + file_name[:-3]+".mp3")
+            + file_name[:-4]+".mp3")
     else:
         print(
             folder_name
             + "_soundtrack/"
-            + file_name[:-3]
+            + file_name[:-4]
             + ".mp3", " already exists, skipping the file !")
 
 
@@ -56,16 +56,25 @@ def extract_soundtrack_from_files(
         nb_threads)
 
 
+def file_is_spleeted(
+        folder_name):
+    answer = (
+        os.path.exists(folder_name[:-4]+"/vocals.mp3")
+        and os.path.exists(folder_name[:-4]+"/accompaniment.mp3"))
+    return answer
+
+
 def separate_voices_from_music(
         folder_name, nb_threads=1):
     onlyfiles = [
         f for f in listdir(folder_name)
-        if isfile(join(folder_name, f))]   
+        if (isfile(join(folder_name, f))
+            and not file_is_spleeted(folder_name + "_separated/"+f))]
     thread_function(
         os.system,
         [("spleeter separate -p spleeter:2stems -c mp3 -o "
           + folder_name + "_separated " + "\""
-          + folder_name + "/" + f + "\"") for f in onlyfiles],
+          + folder_name + "/" + f + "\"",) for f in onlyfiles],
         nb_threads)
 
 
@@ -157,31 +166,13 @@ def make_fingerprints_from_chunks(
         db, folder_name,
         nb_threads=1, db_chunk_processing=1):
     chunk_folders = get_chunks_folders(folder_name)
-    all_chunks = get_all_chunks_from_chunk_folders(chunk_folders)
+    all_chunks = get_all_chunks_from_chunk_folders(folder_name, chunk_folders)
 
-    processing_chunks, total_length, previous_perc = (
-        [],
-        len(all_chunks),
-        -1)
-    for i, ch in enumerate(all_chunks):
-        processing_chunks.append(ch)
-        if len(processing_chunks) >= db_chunk_processing:
-            fingerprints = thread_pool_function(
-                make_fingerprints_from_chunk,
-                processing_chunks,
-                nb_threads)
-
-            add_fingerprints_to_db(
-                db,
-                fingerprints)
-
-            processing_chunks = []
-            previous_perc = print_chunks_fingerprinting_perc(
-                total_length,
-                previous_perc,
-                i)
-    # Complete missing ones
-    if len(processing_chunks) > 0:
+    previous_perc = -1
+    chunks_groups = [
+        enumerate(all_chunks)[x:x+db_chunk_processing]
+        for x in range(0, len(all_chunks), db_chunk_processing)]
+    for j, processing_chunks in enumerate(chunks_groups):
         fingerprints = thread_pool_function(
             make_fingerprints_from_chunk,
             processing_chunks,
@@ -190,12 +181,10 @@ def make_fingerprints_from_chunks(
         add_fingerprints_to_db(
             db,
             fingerprints)
-
-        processing_chunks = []
         previous_perc = print_chunks_fingerprinting_perc(
-            total_length,
+            len(chunks_groups),
             previous_perc,
-            i)
+            j)
 
 
 def make_fingerprints_from_soundtrack(
@@ -224,64 +213,29 @@ def make_fingerprints_from_soundtracks(
         f for f in listdir(folder_name)
         if isfile(join(folder_name, f))]
 
-    processing_sounds, total_length, previous_perc = (
-        [],
-        len(onlyfiles),
-        -1)
-    for i, s in enumerate(onlyfiles):
-        processing_sounds.append((i, folder_name, s))
-        if len(processing_sounds) >= db_sound_processing:
-            fingerprints = thread_pool_function(
-                make_fingerprints_from_soundtrack,
-                processing_sounds,
-                nb_threads)
-            add_fingerprints_to_soundtrack_db(
-                db,
-                fingerprints)
-            processing_sounds = []
-            previous_perc = print_soundtracks_fingerprinting_perc(
-                total_length,
-                previous_perc,
-                i)
-    # Complete the missing ones
-    if len(processing_sounds) > 0:
-        fingerprints = thread_pool_function(
+    previous_perc = -1
+    sounds_chunks = [
+        enumerate(onlyfiles)[r:r+db_sound_processing]
+        for r in range(0, len(onlyfiles), db_sound_processing)]
+
+    for j, processing_sounds in enumerate(sounds_chunks):
+        fingerprints = thread_function(
             make_fingerprints_from_soundtrack,
             processing_sounds,
-            nb_threads)
+            nb_threads
+        )
         add_fingerprints_to_soundtrack_db(
             db,
-            fingerprints)
-        processing_sounds = []
+            fingerprints
+        )
         previous_perc = print_soundtracks_fingerprinting_perc(
-            total_length,
+            len(sounds_chunks),
             previous_perc,
-            i)
+            j
+        )
 
 
-def get_best_matching_sound_to_chunk(
-        chunk_fingerprints, matching_fingerprints):
-    hashdict = {}
-    for (hashh, offset, sound_id) in matching_fingerprints:
-        if hashh in hashdict:
-            hashdict[hashh].append((offset, sound_id))
-        else:
-            hashdict[hashh] = [(offset, sound_id)]
-    # We created a dictionary with hashes as key and the corresponding offset
-    # and soundtrack id as values
-    # Now, we create a dictionary with offset differences for every hash
-    # and every soundtrack that matched, where the key is the soundtrack id
-    # and values are the offset differences
-    sounddict = {}
-    for hashh, offset in chunk_fingerprints:
-        if hashh in hashdict:
-            for sound_offset, sound_id in hashdict[hashh]:
-                if sound_id in sounddict:
-                    sounddict[sound_id].append(sound_offset-offset)
-                else:
-                    sounddict[sound_id] = [sound_offset-offset]
-    # Now, we compute which sound had the most matches with the same offset
-    # differences (we allow some error) 
+def compute_matching_sound_from_offsets(sounddict):
     max_occurences, max_sound_id = (-1, -1)
     for sound_id, occurences in sounddict.items():
         occurences_dict = dict(Counter(occurences))
@@ -303,6 +257,46 @@ def get_best_matching_sound_to_chunk(
         return max_sound_id
     else:
         return -1
+    
+
+def offsets_dict_by_hash(matching_fingerprints):
+    # We create a dictionary with hashes as key and the corresponding offset
+    # and soundtrack id as values
+    hashdict = {}
+    for (hashh, offset, sound_id) in matching_fingerprints:
+        if hashh in hashdict:
+            hashdict[hashh].append((offset, sound_id))
+        else:
+            hashdict[hashh] = [(offset, sound_id)]
+    return hashdict
+
+
+def offset_differences_by_sound(chunk_fingerprints, hashdict):
+    # Now, we create a dictionary with offset differences for every hash
+    # and every soundtrack that matched, where the key is the soundtrack id
+    # and values are the offset differences
+    sounddict = {}
+    for hashh, offset in chunk_fingerprints:
+        if hashh in hashdict:
+            for sound_offset, sound_id in hashdict[hashh]:
+                if sound_id in sounddict:
+                    sounddict[sound_id].append(sound_offset-offset)
+                else:
+                    sounddict[sound_id] = [sound_offset-offset]
+    return sounddict
+
+
+def get_best_matching_sound_to_chunk(
+        chunk_fingerprints, matching_fingerprints):
+    hash_offsets_dict = offsets_dict_by_hash(matching_fingerprints)
+    sound_offsets_diff_dict = offset_differences_by_sound(
+        chunk_fingerprints,
+        hash_offsets_dict)
+    # Now, we compute which sound had the most matches with the same offset
+    # differences (we allow some error)
+    matching_sound = compute_matching_sound_from_offsets(
+        sound_offsets_diff_dict)
+    return matching_sound
 
 
 def print_chunk_matching_perc(
