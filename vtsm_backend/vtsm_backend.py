@@ -21,37 +21,37 @@ from vtsm_backend.database_handler import (
     add_fingerprints_to_soundtrack_db)
 
 
-def extract_soundtrack_from_file(
+def extract_audio_from_file(
         folder_name, file_name):
     if not exists(
             folder_name
-            + "_soundtrack/"
+            + "_audio/"
             + file_name[:-4]
             + ".mp3"):       
         clip = mp.VideoFileClip(folder_name+"/"+file_name)
         clip.audio.write_audiofile(
             folder_name
-            + "_soundtrack/"
+            + "_audio/"
             + file_name[:-4]+".mp3")
     else:
         print(
             folder_name
-            + "_soundtrack/"
+            + "_audio/"
             + file_name[:-4]
             + ".mp3", " already exists, skipping the file !")
 
 
-def extract_soundtrack_from_files(
+def extract_audio_from_files(
         folder_name, nb_threads=1):
     onlyfiles = [
         f for f in listdir(folder_name)
         if isfile(join(folder_name, f))]
     try:
-        os.mkdir(folder_name+"_soundtrack")
+        os.mkdir(folder_name+"_audio")
     except Exception as e:
-        print("Directory already Exists!")
+        print("Audio Directory already Exists!")
     thread_function(
-        extract_soundtrack_from_file,
+        extract_audio_from_file,
         [(folder_name, f) for f in onlyfiles],
         nb_threads)
 
@@ -70,6 +70,7 @@ def separate_voices_from_music(
         f for f in listdir(folder_name)
         if (isfile(join(folder_name, f))
             and not file_is_spleeted(folder_name + "_separated/"+f))]
+    print("Found file(s) to spleet: ", len(onlyfiles))
     thread_function(
         os.system,
         [("spleeter separate -p spleeter:2stems -c mp3 -o "
@@ -91,15 +92,23 @@ def make_chunks_from_episode(
         + file_name
         + "/accompaniment.mp3")
     chunks = make_chunks(audio, chunk_size)
-    os.mkdir(
-        "episodes_chunks/episode_" + str(file_num).zfill(counting_size)
+    folder_string = (
+        "episodes_chunks/episode_"
+        + str(file_num).zfill(counting_size)
         + "_chunks")
+    if not exists(folder_string):
+        os.mkdir(folder_string)
 
     for i, ch in enumerate(chunks):
-        ch.export(
-            "episodes_chunks/episode_" + str(file_num).zfill(counting_size)
+        file_string = (
+            "episodes_chunks/episode_"
+            + str(file_num).zfill(counting_size)
             + "_chunks/"+"chunk_"+str(i).zfill(counting_size)
-            + ".mp3", format="mp3")
+            + ".mp3")
+        if not exists(file_string):
+            ch.export(
+                file_string,
+                format="mp3")
     print("Chunks made for file: ", file_name)
 
 
@@ -170,7 +179,7 @@ def make_fingerprints_from_chunks(
 
     previous_perc = -1
     chunks_groups = [
-        enumerate(all_chunks)[x:x+db_chunk_processing]
+        all_chunks[x:x+db_chunk_processing]
         for x in range(0, len(all_chunks), db_chunk_processing)]
     for j, processing_chunks in enumerate(chunks_groups):
         fingerprints = thread_pool_function(
@@ -212,10 +221,11 @@ def make_fingerprints_from_soundtracks(
     onlyfiles = [
         f for f in listdir(folder_name)
         if isfile(join(folder_name, f))]
+    onlyfiles = [(i, f) for i, f in enumerate(onlyfiles)]
 
     previous_perc = -1
     sounds_chunks = [
-        enumerate(onlyfiles)[r:r+db_sound_processing]
+        onlyfiles[r:r+db_sound_processing]
         for r in range(0, len(onlyfiles), db_sound_processing)]
 
     for j, processing_sounds in enumerate(sounds_chunks):

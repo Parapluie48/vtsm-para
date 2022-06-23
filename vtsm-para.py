@@ -8,7 +8,7 @@ from vtsm_backend.database_handler import (
 from vtsm_backend.vtsm_backend import (
     make_fingerprints_from_chunks,
     make_fingerprints_from_soundtracks,
-    extract_soundtrack_from_files,
+    extract_audio_from_files,
     separate_voices_from_music,
     make_chunks_from_episodes,
     create_chunk_matchings_database)
@@ -22,21 +22,21 @@ def create_fingerprints_database_episodes(
     db_conn = db_create_connection(db_name)
     db_create_episodes_tables(db_conn)
 
-    extract_soundtrack_from_files(
+    extract_audio_from_files(
         folder_name,
-        4)
+        6)
     separate_voices_from_music(
         folder_name + "_soundtrack",
-        4)
+        6)
     make_chunks_from_episodes(
         folder_name + "_soundtrack_separated",
-        4,
+        6,
         10000)
     make_fingerprints_from_chunks(
         db_conn,
         folder_name + "_chunks",
         8,
-        256)
+        512)
 
     db_conn.close()
 
@@ -50,8 +50,8 @@ def create_fingerprints_database_soundtrack(
     make_fingerprints_from_soundtracks(
         db_soundtrack,
         folder_name,
-        4,
-        4)
+        6,
+        6)
 
     db_soundtrack.close()
 
