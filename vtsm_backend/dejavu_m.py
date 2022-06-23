@@ -16,7 +16,7 @@ from typing import List, Tuple
 import numpy as np
 from pydub import AudioSegment
 from pydub.utils import audioop
-import mtsm_backend.wavio
+import vtsm_backend.wavio
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import maximum_filter
@@ -26,13 +26,12 @@ from scipy.ndimage.morphology import (binary_erosion,
 
 from operator import itemgetter
 
-from mtsm_backend.settings import (CONNECTIVITY_MASK, DEFAULT_AMP_MIN,
+from vtsm_backend.settings import (CONNECTIVITY_MASK, DEFAULT_AMP_MIN,
                                     DEFAULT_FAN_VALUE, DEFAULT_FS,
                                     DEFAULT_OVERLAP_RATIO, DEFAULT_WINDOW_SIZE,
                                     FINGERPRINT_REDUCTION, MAX_HASH_TIME_DELTA,
                                     MIN_HASH_TIME_DELTA,
                                     PEAK_NEIGHBORHOOD_SIZE, PEAK_SORT)
-
 
 
 def unique_hash(file_path: str, block_size: int = 2**20) -> str:
@@ -80,7 +79,7 @@ def read(file_name: str, limit: int = None) -> Tuple[List[List[int]], int, str]:
 
         audiofile.frame_rate
     except audioop.error:
-        _, _, audiofile = wavio.readwav(file_name)
+        _, _, audiofile = vtsm_backend.wavio.readwav(file_name)
 
         if limit:
             audiofile = audiofile[:limit * 1000]
@@ -225,6 +224,8 @@ def fingerprint(channel_samples: List[int],
 
     # return hashes
     return generate_hashes(local_maxima, fan_value=fan_value)
+
+    
 def get_file_fingerprints(file_name: str, limit: int, print_output: bool = False):
     channels, fs, file_hash = read(file_name, limit)
     fingerprints = set()

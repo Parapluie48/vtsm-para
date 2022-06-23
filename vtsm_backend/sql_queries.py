@@ -1,5 +1,5 @@
 #Copyright (c) 2013 Will Drevo
-from mtsm_backend.settings import (FIELD_FILE_SHA1, FIELD_FINGERPRINTED,
+from vtsm_backend.settings import (FIELD_FILE_SHA1, FIELD_FINGERPRINTED,
                                     FIELD_HASH, FIELD_OFFSET, FIELD_SONG_ID,
                                     FIELD_SONGNAME, FIELD_TOTAL_HASHES,
                                     FINGERPRINTS_TABLENAME, SONGS_TABLENAME,
